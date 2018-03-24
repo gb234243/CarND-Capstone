@@ -81,7 +81,7 @@ class WaypointUpdater(object):
         #       the trajectory)
         ego_pos = self.get_position(self.ego_pose)
         closest_id = 0
-        closest_dist = sys.maxint
+        closest_dist = sys.float_info.max
         for i, wp in enumerate(self.waypoints):
             # Calculate distance
             dist = self.distance(ego_pos, self.get_position(wp))  
