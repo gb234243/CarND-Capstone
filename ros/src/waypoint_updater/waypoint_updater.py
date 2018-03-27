@@ -20,6 +20,7 @@ POSE_QUEUE_SIZE = 50 # Number of previous vehicle poses to store.
 VERBOSE = 1          # Turn logging on/off
 MIN_UPDATE_DIST = 0.01 # Min. dist. (in m) that the ego vehicle must travel 
                        # before the list of next waypoints is updated
+WP_UNDEFINED = -1    # Undefined waypoint index
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -48,13 +49,13 @@ class WaypointUpdater(object):
         # (Index of waypoint closest to the next red traffic light. If the next 
         #  traffic light is not red, 'traffic_waypoint' is expected to be -1)
         rospy.Subscriber('/traffic_waypoint', Int32, self.traffic_cb)
-        self.wp_traffic_light = -1
+        self.wp_traffic_light = WP_UNDEFINED
 
         # Subscribe to 'obstacle_waypoint' topic
         # (Index of waypoint closest to the next obstacle. If there is no
         #  obstacle ahead, 'obstacle_waypoint' is expected to be -1)
         rospy.Subscriber('/obstacle_waypoint', Int32, self.obstacle_cb)
-        self.wp_obstacle = -1
+        self.wp_obstacle = WP_UNDEFINED
 
         # Publish waypoints ahead of the vehicle 
         # (Starting with the waypoint just ahead of the vehicle)
@@ -76,7 +77,7 @@ class WaypointUpdater(object):
         """
         assert len(self.waypoints), "Track waypoints not set"
 
-        # Find waypoint closest to car
+        # Find waypoint closest to ego vehicle
         # (adapted from Udacity SDC-ND Path Planning Project Starter Code, 
         #  accessed: 03/24/2018)
         # TODO: Reduce search interval based on (known) vehicle motion and
@@ -191,13 +192,33 @@ class WaypointUpdater(object):
         self.waypoints = waypoints.waypoints
         self.v_max = rospy.get_param('/waypoint_loader/velocity') / 3.6
 
-    def traffic_cb(self, msg):
-        # TODO: Callback for /traffic_waypoint message.
-        pass
+    def traffic_cb(self, wp_traffic_light):
+        """ Receives the index of the waypoint that corresponds to the
+            stopline of the next red traffic light. An index of 'WP_UNDEFINED' 
+            signals that no red traffic light (TL) is ahead (or close by)
+            
+            Arguments:
+              wp_traffic_light -- Index of waypoint close to TL stopline
+        """
+        self.wp_traffic_light = wp_traffic_light.data
+        if self.wp_traffic_light != WP_UNDEFINED:
+            self.check_waypoint_index(self.wp_traffic_light)
+
+            if VERBOSE:
+                rospy.loginfo('Traffic light update (%i): %s', 
+                              self.wp_traffic_light,
+                              self.get_position_string(
+                                  self.waypoint[self.wp_traffic_light]))
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message.
         pass
+
+    def check_waypoint_index(self, wp_index):
+        """ Check if waypoint index is valid. Triggers an assert when not.
+        """
+        assert (wp_index >= 0 and wp_index < len(self.waypoints)),\
+                "Invalid waypoint index (%i)" % wp_index
 
     def get_position(self, obj):
         """ Returns the position of a 'PoseStamped' or 'Waypoint' object
