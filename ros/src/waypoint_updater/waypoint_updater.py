@@ -7,11 +7,11 @@ import rospy
 from std_msgs.msg import Int32
 from styx_msgs.msg import Lane, Waypoint
 import sys
+import tf
 
 '''
 This node will publish waypoints from the car's current position to some `x`
 distance ahead.
-
 '''
 
 # Constants
@@ -94,17 +94,48 @@ class WaypointUpdater(object):
                         closest_id, len(self.waypoints), closest_dist,
                         self.get_waypoint_string(self.waypoints[closest_id]))
 
-        # TODO: Determine if the closest waypoint is in front or behind of ego 
-        #       vehicle (for now, select next waypoint in any case)
-        first_id = (closest_id + 1) % len(self.waypoints)
+        # Determine vehicle yaw (from quarternion representation)
+        # (adapted from https://answers.ros.org/question/69754/quaternion-
+        #    transformations-in-python/?answer=69799#post-id-69799,
+        #  accessed 03/26/2018)
+        ego_orient = self.get_orientation(self.ego_pose)
+        q = (ego_orient.x, ego_orient.y, ego_orient.z, ego_orient.w)
+        euler_angles = tf.transformations.euler_from_quaternion(q)
+        ego_yaw = euler_angles[2]
+
+        # Check if the closest waypoint is in front or behind of ego 
+        # vehicle (consider only 2D (x, y) projection)
+        # (adapted from Udacity Path Planning Project (Starter Code) and
+        #  code posted by Jeremy Owen in the Udacity Self-Driving Car Slack on
+        #  08/13/2017, 5:10 AM, https://carnd.slack.com/archives/C5ZS5SBA8/
+        #    p1502593836232659, accessed: 03/10/2018).
+        first_id = closest_id
+        pos_closest = self.get_position(self.waypoints[closest_id])
+        heading = math.atan2(pos_closest.y - ego_pos.y, 
+                             pos_closest.x - ego_pos.x)
+        heading = math.fmod(heading + 2 * math.pi, 2 * math.pi)
+        ego_yaw = math.fmod(ego_yaw + 2 * math.pi, 2 * math.pi)
+        angle = math.fabs(ego_yaw - heading)
+        if (angle > math.pi):
+            angle = 2 * math.pi - angle;
+        if (angle > math.pi / 2):
+            # Waypoint is behind vehicle --> select next
+            first_id = (first_id + 1) % len(self.waypoints)
+
+            if VERBOSE:
+                first_wp = self.waypoints[first_id]
+                first_dist = self.distance(ego_pos, 
+                                           self.get_position(first_wp))
+                rospy.loginfo('Next waypoint (%i/%i) (dist: %.2f m): %s',
+                              first_id, len(self.waypoints), first_dist,
+                              self.get_waypoint_string(first_wp))
 
         if VERBOSE:
-          first_wp = self.waypoints[first_id]
-          first_dist = self.distance(ego_pos, 
-                                     self.get_position(first_wp))
-          rospy.loginfo('Next waypoint (%i/%i) (dist: %.2f m): %s ',
-                        first_id, len(self.waypoints), first_dist,
-                        self.get_waypoint_string(first_wp))
+            wp_selection = "(closest)"
+            if (first_id != closest_id):
+                wp_selection = "(next)"
+            rospy.loginfo('First WP: heading(%.2f) <> yaw(%.2f) => %.2f %s', 
+                          heading, ego_yaw, angle, wp_selection)
 
         # Create list of next waypoints (consider track wrap-around)
         # TODO: Consider last used waypoint to reduce copying
