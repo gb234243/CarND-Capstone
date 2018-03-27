@@ -198,7 +198,7 @@ class WaypointUpdater(object):
             signals that no red traffic light (TL) is ahead (or close by)
             
             Arguments:
-              wp_traffic_light -- Index of waypoint close to TL stopline
+              wp_traffic_light -- Index of waypoint close to next TL stopline
         """
         self.wp_traffic_light = wp_traffic_light.data
         if self.wp_traffic_light != WP_UNDEFINED:
@@ -210,9 +210,23 @@ class WaypointUpdater(object):
                               self.get_position_string(
                                   self.waypoint[self.wp_traffic_light]))
 
-    def obstacle_cb(self, msg):
-        # TODO: Callback for /obstacle_waypoint message.
-        pass
+    def obstacle_cb(self, wp_obstacle):
+        """ Receives the index of the waypoint that corresponds to the next 
+            obstacle. An index of 'WP_UNDEFINED' signals that no obstacle is
+            ahead (or close by)
+            
+            Arguments:
+              wp_obstacle -- Index of waypoint close to next obstacle
+        """
+        self.wp_obstacle = wp_obstacle.data
+        if self.wp_obstacle != WP_UNDEFINED:
+            self.check_waypoint_index(self.wp_obstacle)
+
+            if VERBOSE:
+                rospy.loginfo('Obstacle update (%i): %s', 
+                              self.wp_obstacle,
+                              self.get_position_string(
+                                  self.waypoint[self.wp_obstacle]))
 
     def check_waypoint_index(self, wp_index):
         """ Check if waypoint index is valid. Triggers an assert when not.
