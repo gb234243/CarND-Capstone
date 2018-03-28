@@ -361,12 +361,25 @@ class WaypointUpdater(object):
                          + (p1.y - p2.y)**2 
                          + (p1.z - p2.z)**2)
 
-    def distance_path(self, waypoints, wp1, wp2):
+    def distance_path(self, wp1, wp2):
+        """ Get the distance between two waypoints (by summing up the Euclidean 
+            distances of the waypoints in between)
+
+            Arguments:
+              wp1 -- Index of the first waypoint
+              wp2 -- Index of the second waypoint
+
+            Return:
+              The distance between the given waypoints
+        """
+        self.check_waypoint_index(wp1)
+        self.check_waypoint_index(wp2)
+        assert wp1 < wp2, ("Cannot get distance between waypoints"
+                           " (invalid interval: %i - %i)") % (wp1, wp2)
         dist = 0
-        for i in range(wp1, wp2+1):
-            dist += self.distance(waypoints[wp1].pose.pose.position, 
-                                  waypoints[i].pose.pose.position)
-            wp1 = i
+        for i in range(wp1, wp2):
+            dist += self.distance(self.waypoints[i].pose.pose.position, 
+                                  self.waypoints[i + 1].pose.pose.position)
         return dist
 
 
