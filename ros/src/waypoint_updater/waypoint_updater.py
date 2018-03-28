@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from collections import deque
-from geometry_msgs.msg import PoseStamped, Pose
+from geometry_msgs.msg import Pose, PoseStamped, TwistStamped
 import math
 import rospy
 from std_msgs.msg import Int32
@@ -56,6 +56,10 @@ class WaypointUpdater(object):
         #  obstacle ahead, 'obstacle_waypoint' is expected to be -1)
         rospy.Subscriber('/obstacle_waypoint', Int32, self.obstacle_cb)
         self.wp_obstacle = WP_UNDEFINED
+
+        # Subscribe to 'current_velocity' topic
+        rospy.Subscriber('/current_velocity', TwistStamped, self.velocity_cb)
+        self.current_velocity = 0.0
 
         # Publish waypoints ahead of the vehicle 
         # (Starting with the waypoint just ahead of the vehicle)
@@ -227,6 +231,15 @@ class WaypointUpdater(object):
                               self.wp_obstacle,
                               self.get_position_string(
                                   self.waypoint[self.wp_obstacle]))
+
+    def velocity_cb(self, twist):
+        """ Receives the current ego vehicle twist from the simulator/vehicle 
+            and extracts the current velocity
+
+            Arguments:
+              twist -- Ego vehicle twist
+        """
+        self.current_velocity = twist.twist.linear.x
 
     def check_waypoint_index(self, wp_index):
         """ Check if waypoint index is valid. Triggers an assert when not.
