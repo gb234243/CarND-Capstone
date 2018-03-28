@@ -305,8 +305,17 @@ class WaypointUpdater(object):
         return ('twist[lin(%.2f, %.2f, %.2f), ang(%.2f, %.2f, %.2f)]' %
                 (twl.x, twl.y, twl.z, twa.x, twa.y, twa.z))
 
-    def get_waypoint_velocity(self, waypoint):
-        return waypoint.twist.twist.linear.x
+    def get_waypoint_velocity(self, wp):
+        """ Get target velocity for waypoint
+
+            Arguments:
+              wp -- Index of target waypoint
+
+            Return:
+              Target velocity for waypoint
+        """
+        self.check_waypoint_index(wp)
+        return self.waypoints[wp].twist.twist.linear.x
 
     def set_waypoint_velocity(self, waypoints, waypoint, velocity):
         waypoints[waypoint].twist.twist.linear.x = velocity
