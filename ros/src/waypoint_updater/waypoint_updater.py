@@ -152,7 +152,7 @@ class WaypointUpdater(object):
         self.final_waypoints.header.stamp = self.ego_pose.header.stamp
         for i in range(LOOKAHEAD_WPS):
             self.final_waypoints.waypoints[i] = self.waypoints[first_id]
-            
+
             # Consider track wrap-around
             first_id = (first_id + 1) % len(self.waypoints)
 
@@ -210,7 +210,7 @@ class WaypointUpdater(object):
         """
         self.wp_traffic_light = wp_traffic_light.data
         if self.wp_traffic_light != WP_UNDEFINED:
-            self.check_waypoint_index(self.wp_traffic_light)
+            self.check_waypoint_id(self.waypoints, self.wp_traffic_light)
 
             if VERBOSE:
                 rospy.loginfo('Traffic light update (%i): %s', 
@@ -228,7 +228,7 @@ class WaypointUpdater(object):
         """
         self.wp_obstacle = wp_obstacle.data
         if self.wp_obstacle != WP_UNDEFINED:
-            self.check_waypoint_index(self.wp_obstacle)
+            self.check_waypoint_id(self.waypoints, self.wp_obstacle)
 
             if VERBOSE:
                 rospy.loginfo('Obstacle update (%i): %s', 
@@ -245,11 +245,15 @@ class WaypointUpdater(object):
         """
         self.current_velocity = twist.twist.linear.x
 
-    def check_waypoint_index(self, wp_index):
-        """ Check if waypoint index is valid. Triggers an assert when not.
+    def check_waypoint_id(self, waypoints, wp_id):
+        """ Check if waypoint ID is valid. Triggers an assert when not.
+
+            Arguments:
+              waypoints -- List of waypoints
+              wp_id -- ID that should be checked
         """
-        assert (wp_index >= 0 and wp_index < len(self.waypoints)),\
-                "Invalid waypoint index (%i)" % wp_index
+        assert (wp_id >= 0 and wp_id < len(waypoints)),\
+                "Invalid waypoint id (%i)" % wp_id
 
     def get_position(self, obj):
         """ Returns the position of a 'PoseStamped' or 'Waypoint' object
@@ -331,7 +335,7 @@ class WaypointUpdater(object):
             Return:
               Target velocity for waypoint
         """
-        self.check_waypoint_index(wp)
+        self.check_waypoint_id(self.waypoints, wp)
         return self.waypoints[wp].twist.twist.linear.x
 
     def set_waypoint_velocity(self, wp, velocity):
@@ -384,25 +388,26 @@ class WaypointUpdater(object):
                          + (p1.y - p2.y)**2 
                          + (p1.z - p2.z)**2)
 
-    def distance_path(self, wp1, wp2):
+    def distance_path(self, waypoints, wp1, wp2):
         """ Get the distance between two waypoints (by summing up the Euclidean 
             distances of the waypoints in between)
 
             Arguments:
+              waypoints -- List of waypoints
               wp1 -- Index of the first waypoint
               wp2 -- Index of the second waypoint
 
             Return:
               The distance between the given waypoints
         """
-        self.check_waypoint_index(wp1)
-        self.check_waypoint_index(wp2)
+        self.check_waypoint_id(waypoints, wp1)
+        self.check_waypoint_id(waypoints, wp2)
         assert wp1 < wp2, ("Cannot get distance between waypoints"
                            " (invalid interval: %i - %i)") % (wp1, wp2)
         dist = 0
         for i in range(wp1, wp2):
-            dist += self.distance(self.waypoints[i].pose.pose.position, 
-                                  self.waypoints[i + 1].pose.pose.position)
+            dist += self.distance(self.get_position(waypoints[i]), 
+                                  self.get_position(waypoints[i + 1]))
         return dist
 
 
