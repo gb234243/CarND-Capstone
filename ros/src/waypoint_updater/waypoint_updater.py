@@ -69,8 +69,10 @@ class WaypointUpdater(object):
         for i in range(LOOKAHEAD_WPS):
           self.final_waypoints.waypoints.append(Waypoint())
 
-        # Reset max. velocity
-        self.v_max = 0.0
+        # Reset parameters
+        self.decel_max = 0.0
+        self.accel_max = 0.0
+        self.velocity_max = 0.0
 
         # Start node
         rospy.spin()
@@ -194,7 +196,9 @@ class WaypointUpdater(object):
               waypoints -- List of track waypoints
         """
         self.waypoints = waypoints.waypoints
-        self.v_max = rospy.get_param('/waypoint_loader/velocity') / 3.6
+        self.decel_max = rospy.get_param('/dbw_node/decel_limit')
+        self.accel_max = rospy.get_param('/dbw_node/accel_limit')
+        self.velocity_max = rospy.get_param('/waypoint_loader/velocity') / 3.6
 
     def traffic_cb(self, wp_traffic_light):
         """ Receives the index of the waypoint that corresponds to the
