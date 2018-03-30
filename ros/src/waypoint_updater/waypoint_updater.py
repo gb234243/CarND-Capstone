@@ -334,8 +334,14 @@ class WaypointUpdater(object):
         self.check_waypoint_index(wp)
         return self.waypoints[wp].twist.twist.linear.x
 
-    def set_waypoint_velocity(self, waypoints, waypoint, velocity):
-        waypoints[waypoint].twist.twist.linear.x = velocity
+    def set_waypoint_velocity(self, wp, velocity):
+        """ Set the target velocity of a given waypoint (in place)
+            
+            Arguments:
+              wp -- Waypoint
+              velocity -- Target velocity
+        """
+        wp.twist.twist.linear.x = velocity
 
     def get_waypoint_string(self, wp):
         """ Converts a waypoint to string and returns the string
