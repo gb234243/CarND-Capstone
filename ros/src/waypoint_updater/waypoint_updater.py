@@ -44,6 +44,7 @@ class WaypointUpdater(object):
         # (List of track waypoints; will only be send once)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
         self.waypoints = []
+        self.waypoint_velocities = []
 
         # Subscribe to 'traffic_waypoint' topic
         # (Index of waypoint closest to the next red traffic light. If the next 
@@ -67,7 +68,7 @@ class WaypointUpdater(object):
                                                    queue_size = 1)
         self.final_waypoints = Lane()
         for i in range(LOOKAHEAD_WPS):
-          self.final_waypoints.waypoints.append(Waypoint())
+            self.final_waypoints.waypoints.append(Waypoint())
 
         # Reset parameters
         self.decel_max = 0.0
@@ -81,7 +82,8 @@ class WaypointUpdater(object):
         """ Publishes new waypoints for the waypoint follower node (starting
             with the next waypoint for the ego vehicle).
         """
-        assert len(self.waypoints), "Track waypoints not set"
+        if (not len(self.waypoints) or not len(self.waypoint_velocities)):
+            return
 
         # Find waypoint closest to ego vehicle
         # (adapted from Udacity SDC-ND Path Planning Project Starter Code, 
@@ -148,13 +150,42 @@ class WaypointUpdater(object):
                           heading, ego_yaw, angle, wp_selection)
 
         # Create list of next waypoints (consider track wrap-around)
-        # TODO: Consider last used waypoint to reduce copying
+        # (update waypoint velocities in the process)
         self.final_waypoints.header.stamp = self.ego_pose.header.stamp
+        last_velocity = self.current_velocity
+        last_position = ego_pos
         for i in range(LOOKAHEAD_WPS):
-            self.final_waypoints.waypoints[i] = self.waypoints[first_id]
+            # Set waypoint
+            wp_id = (first_id + i) % len(self.waypoints)
+            self.final_waypoints.waypoints[i] = self.waypoints[wp_id]
 
-            # Consider track wrap-around
-            first_id = (first_id + 1) % len(self.waypoints)
+            # Get distance between last position and waypoint
+            wp_position = self.get_position(self.final_waypoints.waypoints[i])
+            dist = self.distance(last_position, wp_position)
+
+            # Determine next velocity
+            # (adapted from waypoint_loader.py)
+            wp_velocity = self.waypoint_velocities[wp_id]
+            velocity_diff = wp_velocity - last_velocity
+            if velocity_diff < 0.0:
+                # Decelerate
+                min_velocity = max(0.0, last_velocity 
+                                        - math.sqrt(2 * self.decel_max * dist))
+                wp_velocity = max(min_velocity, wp_velocity)
+            elif velocity_diff > 0.0:
+                # Accelerate
+                max_velocity = min(self.velocity_max, 
+                                   last_velocity + math.sqrt(2 * 
+                                                       self.accel_max * dist))
+                wp_velocity = min(max_velocity, wp_velocity)
+
+            # Set waypoint velocity
+            self.set_waypoint_velocity(self.final_waypoints.waypoints[i],
+                                       wp_velocity)
+
+            # Next (consider track wrap-around)
+            last_velocity = wp_velocity
+            last_position = wp_position
 
         # Publish next waypoints
         self.final_waypoints_pub.publish(self.final_waypoints)
@@ -196,7 +227,9 @@ class WaypointUpdater(object):
               waypoints -- List of track waypoints
         """
         self.waypoints = waypoints.waypoints
-        self.decel_max = rospy.get_param('/dbw_node/decel_limit')
+        for wp in waypoints.waypoints:
+            self.waypoint_velocities.append(self.get_waypoint_velocity(wp))
+        self.decel_max = -rospy.get_param('/dbw_node/decel_limit')
         self.accel_max = rospy.get_param('/dbw_node/accel_limit')
         self.velocity_max = rospy.get_param('/waypoint_loader/velocity') / 3.6
 
@@ -330,13 +363,12 @@ class WaypointUpdater(object):
         """ Get target velocity for waypoint
 
             Arguments:
-              wp -- Index of target waypoint
+              wp -- Target waypoint
 
             Return:
               Target velocity for waypoint
         """
-        self.check_waypoint_id(self.waypoints, wp)
-        return self.waypoints[wp].twist.twist.linear.x
+        return wp.twist.twist.linear.x
 
     def set_waypoint_velocity(self, wp, velocity):
         """ Set the target velocity of a given waypoint (in place)
