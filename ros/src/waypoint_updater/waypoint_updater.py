@@ -345,7 +345,7 @@ class WaypointUpdater(object):
                 rospy.loginfo('Traffic light update (%i): %s', 
                               self.wp_traffic_light,
                               self.get_position_string(
-                                  self.waypoint[self.wp_traffic_light]))
+                                  self.waypoints[self.wp_traffic_light]))
 
     def obstacle_cb(self, wp_obstacle):
         """ Receives the index of the waypoint that corresponds to the next 
@@ -363,7 +363,7 @@ class WaypointUpdater(object):
                 rospy.loginfo('Obstacle update (%i): %s', 
                               self.wp_obstacle,
                               self.get_position_string(
-                                  self.waypoint[self.wp_obstacle]))
+                                  self.waypoints[self.wp_obstacle]))
 
     def velocity_cb(self, twist):
         """ Receives the current ego vehicle twist from the simulator/vehicle 
