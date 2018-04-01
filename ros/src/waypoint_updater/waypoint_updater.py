@@ -17,7 +17,6 @@ distance ahead.
 
 # Constants
 LOOKAHEAD_WPS = 200  # Number of waypoints we will publish.
-VERBOSE = 0          # Turn logging on/off
 WP_UNDEFINED = -1    # Undefined waypoint index
 UPDATE_RATE = 30     # Update rate of the main loop (in Hz)
 
@@ -105,14 +104,6 @@ class WaypointUpdater(object):
         #  Project Walkthrough (Term 3))
         closest_id = self.waypoint_tree.query([ego_pos.x, ego_pos.y], 1)[1]
 
-        if VERBOSE:
-            closest_dist = self.distance(ego_pos, 
-                                         self.get_position(
-                                             self.waypoints[closest_id]))
-            rospy.loginfo('Closest waypoint (%i/%i) (dist: %.2f m): %s ',
-                          closest_id, len(self.waypoints), closest_dist,
-                          self.get_waypoint_string(self.waypoints[closest_id]))
-
         # Determine vehicle yaw (from quarternion representation)
         # (adapted from https://answers.ros.org/question/69754/quaternion-
         #    transformations-in-python/?answer=69799#post-id-69799,
@@ -140,21 +131,6 @@ class WaypointUpdater(object):
         if (angle > math.pi / 2):
             # Waypoint is behind vehicle --> select next
             first_id = (first_id + 1) % len(self.waypoints)
-
-            if VERBOSE:
-                first_wp = self.waypoints[first_id]
-                first_dist = self.distance(ego_pos, 
-                                           self.get_position(first_wp))
-                rospy.loginfo('Next waypoint (%i/%i) (dist: %.2f m): %s',
-                              first_id, len(self.waypoints), first_dist,
-                              self.get_waypoint_string(first_wp))
-
-        if VERBOSE:
-            wp_selection = "(closest)"
-            if (first_id != closest_id):
-                wp_selection = "(next)"
-            rospy.loginfo('First WP: heading(%.2f) <> yaw(%.2f) => %.2f %s', 
-                          heading, ego_yaw, angle, wp_selection)
 
         # Create list of next waypoints (consider track wrap-around)
         # (update waypoint velocities in the process)
@@ -274,13 +250,6 @@ class WaypointUpdater(object):
             Arguments:
               ego_pose: Current ego pose
         """
-        if VERBOSE:
-            dist_travelled = self.distance(self.get_position(ego_pose),
-                                           self.get_position(self.ego_pose))
-            rospy.loginfo('Ego pose: %s - dist(%.2f m)', 
-                          self.get_pose_string(ego_pose), dist_travelled)
-
-        # Set pose
         self.ego_pose = ego_pose
 
     def waypoints_cb(self, waypoints):
@@ -322,12 +291,6 @@ class WaypointUpdater(object):
         if self.wp_traffic_light != WP_UNDEFINED:
             self.check_waypoint_id(self.waypoints, self.wp_traffic_light)
 
-            if VERBOSE:
-                rospy.loginfo('Traffic light update (%i): %s', 
-                              self.wp_traffic_light,
-                              self.get_position_string(
-                                  self.waypoints[self.wp_traffic_light]))
-
     def obstacle_cb(self, wp_obstacle):
         """ Receives the index of the waypoint that corresponds to the next 
             obstacle. An index of 'WP_UNDEFINED' signals that no obstacle is
@@ -339,12 +302,6 @@ class WaypointUpdater(object):
         self.wp_obstacle = wp_obstacle.data
         if self.wp_obstacle != WP_UNDEFINED:
             self.check_waypoint_id(self.waypoints, self.wp_obstacle)
-
-            if VERBOSE:
-                rospy.loginfo('Obstacle update (%i): %s', 
-                              self.wp_obstacle,
-                              self.get_position_string(
-                                  self.waypoints[self.wp_obstacle]))
 
     def velocity_cb(self, twist):
         """ Receives the current ego vehicle twist from the simulator/vehicle 
