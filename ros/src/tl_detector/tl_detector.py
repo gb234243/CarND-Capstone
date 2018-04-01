@@ -12,7 +12,8 @@ import tf
 import cv2
 import yaml
 
-STATE_COUNT_THRESHOLD = 3
+STATE_COUNT_THRESHOLD = 2
+UPDATE_RATE = 5     # Update rate of the main loop (in Hz)
 
 class TLDetector(object):
     def __init__(self):
@@ -52,12 +53,26 @@ class TLDetector(object):
         self.last_state = TrafficLight.UNKNOWN
         self.last_wp = -1
         self.state_count = 0
+        self.is_init = False
 
         # Adapted from Udacity SDC-ND Programming a Real Self-Driving Car 
         # Project Walkthrough (Term 3)
         self.waypoint_tree = None
 
-        rospy.spin()
+        # Run main loop
+        self.loop()
+
+    def loop(self):
+        """Main loop (check images at a fixed rate)
+
+           (adapted from Udacity SDC-ND Programming a Real Self-Driving Car 
+            Project Walkthrough (Term 3))
+        """
+        rate = rospy.Rate(UPDATE_RATE)
+        while not rospy.is_shutdown():
+            if (self.is_init):
+                self.check_image()
+            rate.sleep()
 
     def pose_cb(self, msg):
         self.pose = msg
@@ -72,14 +87,15 @@ class TLDetector(object):
         waypoints_2d = [[wp.pose.pose.position.x, wp.pose.pose.position.y]\
                            for wp in waypoints.waypoints]
         self.waypoint_tree = KDTree(waypoints_2d)
+        
+        # Signal that node is initialized
+        self.is_init = True
 
     def traffic_cb(self, msg):
         self.lights = msg.lights
 
     def image_cb(self, msg):
-        """Identifies red lights in the incoming camera image and publishes the 
-           index of the waypoint closest to the red light's stop line to
-           /traffic_waypoint
+        """Stores the current camera image
 
         Args:
             msg (Image): image from car-mounted camera
@@ -87,10 +103,16 @@ class TLDetector(object):
         """
         self.has_image = True
         self.camera_image = msg
+
+    def check_image(self):
+        """Identifies red lights in camera images and publishes the 
+           index of the waypoint closest to the red light's stop line to
+           /traffic_waypoint
+        """
         light_wp, state = self.process_traffic_lights()
 
         '''
-        Publish upcoming red lights at camera frequency.
+        Publish upcoming red lights
         Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
         of times till we start using it. Otherwise the previous stable state is
         used.
