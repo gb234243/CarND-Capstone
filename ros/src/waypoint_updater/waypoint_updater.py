@@ -4,6 +4,7 @@ from collections import deque
 from geometry_msgs.msg import Pose, PoseStamped, TwistStamped
 import math
 import rospy
+from scipy.spatial import KDTree
 from std_msgs.msg import Int32
 from styx_msgs.msg import Lane, Waypoint
 import sys
@@ -21,10 +22,6 @@ VERBOSE = 1          # Turn logging on/off
 MIN_UPDATE_DIST = 0.01 # Min. dist. (in m) that the ego vehicle must travel 
                        # before the list of next waypoints is updated
 WP_UNDEFINED = -1    # Undefined waypoint index
-FULL_SEARCH_DIST = 20 # Max. distance in meters between last trajectory start 
-                      # and current ego vehicle position for which the
-                      # reduced search interval is used
-REDUCED_INTERVAL = 100 # (Half-) Size of reduced search interval
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -50,6 +47,11 @@ class WaypointUpdater(object):
         self.waypoints = []
         self.waypoint_velocities = []
 
+        # From Udacity SDC-ND Programming a Real Self-Driving Car 
+        # Project Walkthrough (Term 3)
+        self.waypoints_2d = None
+        self.waypoint_tree = None
+
         # Subscribe to 'traffic_waypoint' topic
         # (Index of waypoint closest to the next red traffic light. If the next 
         #  traffic light is not red, 'traffic_waypoint' is expected to be -1)
@@ -73,7 +75,6 @@ class WaypointUpdater(object):
         self.final_waypoints = Lane()
         for i in range(LOOKAHEAD_WPS):
             self.final_waypoints.waypoints.append(Waypoint())
-        self.last_first_id = WP_UNDEFINED
 
         # Reset parameters
         self.decel_max = 0.0
@@ -93,41 +94,18 @@ class WaypointUpdater(object):
         # Get start position
         ego_pos = self.get_position(self.ego_pose)
 
-        # Determine search interval
-        si_start_id = 0
-        si_stop_id = len(self.waypoints)
-        if self.last_first_id != WP_UNDEFINED:
-            dist = self.distance(ego_pos, 
-                       self.get_position(self.waypoints[self.last_first_id]))
-            if dist < FULL_SEARCH_DIST:
-                si_start_id = self.last_first_id - REDUCED_INTERVAL
-                si_stop_id = self.last_first_id + REDUCED_INTERVAL
-
         # Find waypoint closest to ego vehicle
-        # (adapted from Udacity SDC-ND Path Planning Project Starter Code, 
-        #  accessed: 03/24/2018)
-        closest_id = 0
-        closest_dist = sys.float_info.max
-        for i in range(si_start_id, si_stop_id):
-            wp_id = i
-
-            # Wrap-around?
-            if wp_id < 0:
-                wp_id += len(self.waypoints)
-            elif wp_id >= len(self.waypoints):
-                wp_id -= len(self.waypoints)
-
-            # Calculate distance
-            dist = self.distance(ego_pos, 
-                                 self.get_position(self.waypoints[wp_id]))  
-            if (dist < closest_dist):
-                closest_id = wp_id
-                closest_dist = dist
+        # (adapted from Udacity SDC-ND Programming a Real Self-Driving Car 
+        #  Project Walkthrough (Term 3))
+        closest_id = self.waypoint_tree.query([ego_pos.x, ego_pos.y], 1)[1]
 
         if VERBOSE:
-          rospy.loginfo('Closest waypoint (%i/%i) (dist: %.2f m): %s ',
-                        closest_id, len(self.waypoints), closest_dist,
-                        self.get_waypoint_string(self.waypoints[closest_id]))
+            closest_dist = self.distance(ego_pos, 
+                                         self.get_position(
+                                             self.waypoints[closest_id]))
+            rospy.loginfo('Closest waypoint (%i/%i) (dist: %.2f m): %s ',
+                          closest_id, len(self.waypoints), closest_dist,
+                          self.get_waypoint_string(self.waypoints[closest_id]))
 
         # Determine vehicle yaw (from quarternion representation)
         # (adapted from https://answers.ros.org/question/69754/quaternion-
@@ -171,9 +149,6 @@ class WaypointUpdater(object):
                 wp_selection = "(next)"
             rospy.loginfo('First WP: heading(%.2f) <> yaw(%.2f) => %.2f %s', 
                           heading, ego_yaw, angle, wp_selection)
-
-        # Store first ID
-        self.last_first_id = first_id
 
         # Create list of next waypoints (consider track wrap-around)
         # (update waypoint velocities in the process)
@@ -325,6 +300,16 @@ class WaypointUpdater(object):
         self.waypoints = waypoints.waypoints
         for wp in waypoints.waypoints:
             self.waypoint_velocities.append(self.get_waypoint_velocity(wp))
+
+        # Adapted from Udacity SDC-ND Programming a Real Self-Driving Car 
+        # Project Walkthrough (Term 3)
+        if not self.waypoints_2d:
+            self.waypoints_2d = [[self.get_position(wp).x, 
+                                  self.get_position(wp).y]\
+                                    for wp in self.waypoints]
+            self.waypoint_tree = KDTree(self.waypoints_2d)
+
+        # Get limits
         self.decel_max = -rospy.get_param('/dbw_node/decel_limit')
         self.accel_max = rospy.get_param('/dbw_node/accel_limit')
         self.velocity_max = rospy.get_param('/waypoint_loader/velocity') / 3.6
