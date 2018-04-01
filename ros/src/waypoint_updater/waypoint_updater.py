@@ -42,12 +42,12 @@ class WaypointUpdater(object):
         # Subscribe to 'base_waypoints' topic
         # (List of track waypoints; will only be send once)
         rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
-        self.waypoints = []
+        self.waypoints = None
         self.waypoint_velocities = []
+        self.is_init = False
 
         # From Udacity SDC-ND Programming a Real Self-Driving Car 
         # Project Walkthrough (Term 3)
-        self.waypoints_2d = None
         self.waypoint_tree = None
 
         # Subscribe to 'traffic_waypoint' topic
@@ -86,7 +86,7 @@ class WaypointUpdater(object):
         """ Publishes new waypoints for the waypoint follower node (starting
             with the next waypoint for the ego vehicle).
         """
-        if (not len(self.waypoints) or not len(self.waypoint_velocities)):
+        if (not self.is_init):
             return
 
         # Get start position
@@ -292,22 +292,26 @@ class WaypointUpdater(object):
             Arguments:
               waypoints -- List of track waypoints
         """
+        if self.waypoints:
+            return
+
         self.waypoints = waypoints.waypoints
         for wp in waypoints.waypoints:
             self.waypoint_velocities.append(self.get_waypoint_velocity(wp))
 
         # Adapted from Udacity SDC-ND Programming a Real Self-Driving Car 
         # Project Walkthrough (Term 3)
-        if not self.waypoints_2d:
-            self.waypoints_2d = [[self.get_position(wp).x, 
-                                  self.get_position(wp).y]\
-                                    for wp in self.waypoints]
-            self.waypoint_tree = KDTree(self.waypoints_2d)
+        waypoints_2d = [[self.get_position(wp).x, self.get_position(wp).y]\
+                           for wp in self.waypoints]
+        self.waypoint_tree = KDTree(waypoints_2d)
 
         # Get limits
         self.decel_max = -rospy.get_param('/dbw_node/decel_limit')
         self.accel_max = rospy.get_param('/dbw_node/accel_limit')
         self.velocity_max = rospy.get_param('/waypoint_loader/velocity') / 3.6
+
+        # Mark node as ready
+        self.is_init = True
 
     def traffic_cb(self, wp_traffic_light):
         """ Receives the index of the waypoint that corresponds to the
