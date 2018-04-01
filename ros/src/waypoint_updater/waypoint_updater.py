@@ -21,6 +21,10 @@ VERBOSE = 1          # Turn logging on/off
 MIN_UPDATE_DIST = 0.01 # Min. dist. (in m) that the ego vehicle must travel 
                        # before the list of next waypoints is updated
 WP_UNDEFINED = -1    # Undefined waypoint index
+FULL_SEARCH_DIST = 20 # Max. distance in meters between last trajectory start 
+                      # and current ego vehicle position for which the
+                      # reduced search interval is used
+REDUCED_INTERVAL = 100 # (Half-) Size of reduced search interval
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -69,6 +73,7 @@ class WaypointUpdater(object):
         self.final_waypoints = Lane()
         for i in range(LOOKAHEAD_WPS):
             self.final_waypoints.waypoints.append(Waypoint())
+        self.last_first_id = WP_UNDEFINED
 
         # Reset parameters
         self.decel_max = 0.0
@@ -85,20 +90,38 @@ class WaypointUpdater(object):
         if (not len(self.waypoints) or not len(self.waypoint_velocities)):
             return
 
+        # Get start position
+        ego_pos = self.get_position(self.ego_pose)
+
+        # Determine search interval
+        si_start_id = 0
+        si_stop_id = len(self.waypoints)
+        if self.last_first_id != WP_UNDEFINED:
+            dist = self.distance(ego_pos, 
+                       self.get_position(self.waypoints[self.last_first_id]))
+            if dist < FULL_SEARCH_DIST:
+                si_start_id = self.last_first_id - REDUCED_INTERVAL
+                si_stop_id = self.last_first_id + REDUCED_INTERVAL
+
         # Find waypoint closest to ego vehicle
         # (adapted from Udacity SDC-ND Path Planning Project Starter Code, 
         #  accessed: 03/24/2018)
-        # TODO: Reduce search interval based on (known) vehicle motion and
-        #       previously selected path points (assuming the vehicle follows
-        #       the trajectory)
-        ego_pos = self.get_position(self.ego_pose)
         closest_id = 0
         closest_dist = sys.float_info.max
-        for i, wp in enumerate(self.waypoints):
+        for i in range(si_start_id, si_stop_id):
+            wp_id = i
+
+            # Wrap-around?
+            if wp_id < 0:
+                wp_id += len(self.waypoints)
+            elif wp_id >= len(self.waypoints):
+                wp_id -= len(self.waypoints)
+
             # Calculate distance
-            dist = self.distance(ego_pos, self.get_position(wp))  
+            dist = self.distance(ego_pos, 
+                                 self.get_position(self.waypoints[wp_id]))  
             if (dist < closest_dist):
-                closest_id = i
+                closest_id = wp_id
                 closest_dist = dist
 
         if VERBOSE:
@@ -148,6 +171,9 @@ class WaypointUpdater(object):
                 wp_selection = "(next)"
             rospy.loginfo('First WP: heading(%.2f) <> yaw(%.2f) => %.2f %s', 
                           heading, ego_yaw, angle, wp_selection)
+
+        # Store first ID
+        self.last_first_id = first_id
 
         # Create list of next waypoints (consider track wrap-around)
         # (update waypoint velocities in the process)
