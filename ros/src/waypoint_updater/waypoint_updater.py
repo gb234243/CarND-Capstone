@@ -17,10 +17,9 @@ distance ahead.
 
 # Constants
 LOOKAHEAD_WPS = 200  # Number of waypoints we will publish.
-VERBOSE = 1          # Turn logging on/off
-MIN_UPDATE_DIST = 0.01 # Min. dist. (in m) that the ego vehicle must travel 
-                       # before the list of next waypoints is updated
+VERBOSE = 0          # Turn logging on/off
 WP_UNDEFINED = -1    # Undefined waypoint index
+UPDATE_RATE = 30     # Update rate of the main loop (in Hz)
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -80,15 +79,24 @@ class WaypointUpdater(object):
         self.velocity_max = 0.0
 
         # Start node
-        rospy.spin()
+        self.loop()
+
+    def loop(self):
+        """Main loop (publish waypoints at a fixed rate)
+
+           (adapted from Udacity SDC-ND Programming a Real Self-Driving Car 
+            Project Walkthrough (Term 3))
+        """
+        rate = rospy.Rate(UPDATE_RATE)
+        while not rospy.is_shutdown():
+            if (self.is_init):
+                self.publish_waypoints()
+            rate.sleep()
 
     def publish_waypoints(self):
         """ Publishes new waypoints for the waypoint follower node (starting
             with the next waypoint for the ego vehicle).
         """
-        if (not self.is_init):
-            return
-
         # Get start position
         ego_pos = self.get_position(self.ego_pose)
 
@@ -261,30 +269,19 @@ class WaypointUpdater(object):
 
     def pose_cb(self, ego_pose):
         """ Callback function for ego vehicle pose (position, orientation)  
-            updates. If the ego vehicle travelled a certain distance 
-            (MIN_UPDATE_DIST) since the last update, a new list of waypoints
-            is published for the waypoint follower node.
+            updates.
 
             Arguments:
               ego_pose: Current ego pose
         """
-        # Calculate the distance the ego vehicle travelled since the last
-        # update
-        dist_travelled = self.distance(self.get_position(ego_pose),
-                                       self.get_position(self.ego_pose))
         if VERBOSE:
+            dist_travelled = self.distance(self.get_position(ego_pose),
+                                           self.get_position(self.ego_pose))
             rospy.loginfo('Ego pose: %s - dist(%.2f m)', 
                           self.get_pose_string(ego_pose), dist_travelled)
 
-        # Update?
-        if (dist_travelled < MIN_UPDATE_DIST):
-            return
-
         # Set pose
         self.ego_pose = ego_pose
-
-        # Publish waypoints update
-        self.publish_waypoints()
 
     def waypoints_cb(self, waypoints):
         """ Receives a list of track waypoints and stores them internally
