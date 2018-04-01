@@ -187,8 +187,78 @@ class WaypointUpdater(object):
             last_velocity = wp_velocity
             last_position = wp_position
 
+        # Handle traffic lights/obstacles
+        self.handle_stops(self.final_waypoints.waypoints, first_id)
+
         # Publish next waypoints
         self.final_waypoints_pub.publish(self.final_waypoints)
+
+    def handle_stops(self, waypoints, first_id):
+        """ Update the velocities for each waypoint of a given trajectory
+            so the ego vehicle stops smoothly (if necessary).
+
+            Arguments:
+              waypoints -- Next waypoints for the ego vehicle (expected size:
+                           LOOKAHEAD_WPS)
+              first_id -- ID (absolute) of next waypoint for ego vehicle
+        """
+        # Make IDs relative
+        obstacle_id = self.waypoint_in_range(waypoints, self.wp_obstacle, 
+                                             first_id)
+        traffic_light_id = self.waypoint_in_range(waypoints, 
+                                                  self.wp_traffic_light, 
+                                                  first_id)
+
+        # Stop?
+        stop_id = obstacle_id
+        if (traffic_light_id != WP_UNDEFINED and
+            (stop_id == WP_UNDEFINED or traffic_light_id < stop_id)):
+            stop_id = traffic_light_id
+        if stop_id == WP_UNDEFINED:
+            return
+        
+        # Reset all waypoints after stopping point
+        for i in range (stop_id, len(waypoints)):
+            self.set_waypoint_velocity(waypoints[i], 0.0)
+
+        # Continuously decrease velocity until stopping point
+        # (adapted from waypoint_loader.py)
+        for i in range(stop_id):
+            dist = self.distance_path(waypoints, i, stop_id)
+            v_decel = math.sqrt(2 * self.decel_max * dist)
+            if v_decel < 1.0:
+                v_decel = 0.0
+            v_wp = self.get_waypoint_velocity(waypoints[i])
+            self.set_waypoint_velocity(waypoints[i], min(v_wp, v_decel))
+
+    def waypoint_in_range(self, waypoints, wp_id, first_id):
+        """ Check if a given waypoint (defined through its absolute ID) is in 
+            range of a list of waypoints (where the first waypoint is
+            defined through 'first_id')
+
+            Arguments:
+              waypoints -- List of waypoints
+              wp_id -- Waypoint ID (absolute)
+              first_id -- ID of first waypoint in 'waypoints' (absolute)
+
+            Return:
+              Relative position of the waypoint in the list of waypoints (when 
+              the waypoint is in range). WP_UNDEFINED, otherwise.
+        """
+        if wp_id == WP_UNDEFINED:
+            return WP_UNDEFINED
+
+        # Make ID relative
+        if wp_id < first_id:
+            wp_id = len(self.waypoints) + wp_id - first_id
+        else:
+            wp_id = wp_id - first_id
+
+        # Is the waypoint in range?
+        if wp_id >= len(waypoints):
+            return WP_UNDEFINED
+
+        return wp_id
 
     def pose_cb(self, ego_pose):
         """ Callback function for ego vehicle pose (position, orientation)  
