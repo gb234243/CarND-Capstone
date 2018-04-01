@@ -2,6 +2,7 @@
 import rospy
 from std_msgs.msg import Int32
 from geometry_msgs.msg import PoseStamped, Pose
+from scipy.spatial import KDTree
 from styx_msgs.msg import TrafficLightArray, TrafficLight
 from styx_msgs.msg import Lane
 from sensor_msgs.msg import Image
@@ -52,13 +53,25 @@ class TLDetector(object):
         self.last_wp = -1
         self.state_count = 0
 
+        # Adapted from Udacity SDC-ND Programming a Real Self-Driving Car 
+        # Project Walkthrough (Term 3)
+        self.waypoint_tree = None
+
         rospy.spin()
 
     def pose_cb(self, msg):
         self.pose = msg
 
     def waypoints_cb(self, waypoints):
+        if self.waypoints:
+            return
         self.waypoints = waypoints
+
+        # Adapted from Udacity SDC-ND Programming a Real Self-Driving Car 
+        # Project Walkthrough (Term 3)
+        waypoints_2d = [[wp.pose.pose.position.x, wp.pose.pose.position.y]\
+                           for wp in waypoints.waypoints]
+        self.waypoint_tree = KDTree(waypoints_2d)
 
     def traffic_cb(self, msg):
         self.lights = msg.lights
