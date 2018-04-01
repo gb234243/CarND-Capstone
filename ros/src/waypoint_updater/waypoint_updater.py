@@ -17,7 +17,6 @@ distance ahead.
 
 # Constants
 LOOKAHEAD_WPS = 200  # Number of waypoints we will publish.
-POSE_QUEUE_SIZE = 50 # Number of previous vehicle poses to store.
 VERBOSE = 1          # Turn logging on/off
 MIN_UPDATE_DIST = 0.01 # Min. dist. (in m) that the ego vehicle must travel 
                        # before the list of next waypoints is updated
@@ -39,7 +38,6 @@ class WaypointUpdater(object):
         # (Current ego position)
         rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
         self.ego_pose = PoseStamped()
-        self.ego_pose_queue = deque(maxlen = POSE_QUEUE_SIZE) # Fixed length
 
         # Subscribe to 'base_waypoints' topic
         # (List of track waypoints; will only be send once)
@@ -284,9 +282,6 @@ class WaypointUpdater(object):
 
         # Set pose
         self.ego_pose = ego_pose
-        
-        # Keep a history of ego poses
-        self.ego_pose_queue.append(self.ego_pose)
 
         # Publish waypoints update
         self.publish_waypoints()
