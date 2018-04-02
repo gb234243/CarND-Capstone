@@ -90,6 +90,7 @@ class WaypointUpdater(object):
         while not rospy.is_shutdown():
             if (self.is_init):
                 self.publish_waypoints()
+
             rate.sleep()
 
     def publish_waypoints(self):
@@ -208,7 +209,7 @@ class WaypointUpdater(object):
         # (adapted from waypoint_loader.py)
         for i in range(stop_id):
             dist = self.distance_path(waypoints, i, stop_id)
-            v_decel = math.sqrt(2 * self.decel_max * dist)
+            v_decel = math.sqrt(self.decel_max / 2 * dist)
             if v_decel < 1.0:
                 v_decel = 0.0
             v_wp = self.get_waypoint_velocity(waypoints[i])
@@ -236,6 +237,12 @@ class WaypointUpdater(object):
             wp_id = len(self.waypoints) + wp_id - first_id
         else:
             wp_id = wp_id - first_id
+
+        # Request a full stop a few waypoints before the stop line
+        # (to prevent driving over the stop line (e.g. due to latency from the
+        #  controllers, node update rates, etc.) at which point the traffic
+        #  light will not be detected in front of the car anymore)
+        wp_id = (wp_id - 4) if wp_id > 3 else 0 
 
         # Is the waypoint in range?
         if wp_id >= len(waypoints):
