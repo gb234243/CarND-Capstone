@@ -16,9 +16,18 @@ distance ahead.
 '''
 
 # Constants
-LOOKAHEAD_WPS = 200  # Number of waypoints we will publish.
-WP_UNDEFINED = -1    # Undefined waypoint index
-UPDATE_RATE = 30     # Update rate of the main loop (in Hz)
+
+# Number of waypoints we will publish (reduced as suggested by "alangordon" in
+# the Udacity Self-Driving Car Slack on 04/05/2018, 8:28 AM,
+# https://carnd.slack.com/archives/C6NVDVAQ3/p1522909695000091, accessed
+# 04/05/2018)
+LOOKAHEAD_WPS = 50
+
+# Undefined waypoint index
+WP_UNDEFINED = -1
+
+# Update rate of the main loop (in Hz)
+UPDATE_RATE = 30
 
 class WaypointUpdater(object):
     def __init__(self):
@@ -136,15 +145,37 @@ class WaypointUpdater(object):
         # Create list of next waypoints (consider track wrap-around)
         # (update waypoint velocities in the process)
         self.final_waypoints.header.stamp = self.ego_pose.header.stamp
-        last_velocity = self.current_velocity
-        last_position = ego_pos
+        self.calculate_velocities(self.final_waypoints.waypoints, first_id,
+                                  self.current_velocity, ego_pos)
+
+        # Publish next waypoints
+        self.final_waypoints_pub.publish(self.final_waypoints)
+
+    def calculate_velocities(self, waypoints, first_id, last_velocity,
+                             last_position):
+        """ Set velocities for next waypoints for ego vehicle
+
+            Arguments:
+              waypoints -- Next waypoints for the ego vehicle (expected size:
+                           LOOKAHEAD_WPS)
+              first_id -- ID (absolute) of next waypoint for ego vehicle
+              last_velocity -- Current velocity of ego vehicle
+              last_position -- Current position of ego vehicle
+        """
+        stop_id = self.get_stop_point(waypoints, first_id)
+
         for i in range(LOOKAHEAD_WPS):
             # Set waypoint
             wp_id = (first_id + i) % len(self.waypoints)
-            self.final_waypoints.waypoints[i] = self.waypoints[wp_id]
+            waypoints[i] = self.waypoints[wp_id]
+
+            # After stop point?
+            if stop_id != WP_UNDEFINED and i >= stop_id:
+                self.set_waypoint_velocity(waypoints[i], 0.0)
+                continue
 
             # Get distance between last position and waypoint
-            wp_position = self.get_position(self.final_waypoints.waypoints[i])
+            wp_position = self.get_position(waypoints[i])
             dist = self.distance(last_position, wp_position)
 
             # Determine next velocity
@@ -163,28 +194,32 @@ class WaypointUpdater(object):
                                                        self.accel_max * dist))
                 wp_velocity = min(max_velocity, wp_velocity)
 
+            # Consider stop point
+            if stop_id != WP_UNDEFINED:
+                dist = self.distance_path(waypoints, i, stop_id)
+                v_decel = math.sqrt(self.decel_max / 2 * dist)
+                if v_decel < 1.0:
+                    v_decel = 0.0
+                wp_velocity = min(wp_velocity, v_decel)
+
             # Set waypoint velocity
-            self.set_waypoint_velocity(self.final_waypoints.waypoints[i],
-                                       wp_velocity)
+            self.set_waypoint_velocity(waypoints[i], wp_velocity)
 
             # Next (consider track wrap-around)
             last_velocity = wp_velocity
             last_position = wp_position
 
-        # Handle traffic lights/obstacles
-        self.handle_stops(self.final_waypoints.waypoints, first_id)
-
-        # Publish next waypoints
-        self.final_waypoints_pub.publish(self.final_waypoints)
-
-    def handle_stops(self, waypoints, first_id):
-        """ Update the velocities for each waypoint of a given trajectory
-            so the ego vehicle stops smoothly (if necessary).
+    def get_stop_point(self, waypoints, first_id):
+        """ Check if next traffic light/obstacle is in range of next set of
+            waypoints for ego vehicle
 
             Arguments:
               waypoints -- Next waypoints for the ego vehicle (expected size:
                            LOOKAHEAD_WPS)
               first_id -- ID (absolute) of next waypoint for ego vehicle
+
+            Return:
+              ID of stopping point in set of waypoints
         """
         # Make IDs relative
         obstacle_id = self.waypoint_in_range(waypoints, self.wp_obstacle, 
@@ -198,22 +233,7 @@ class WaypointUpdater(object):
         if (traffic_light_id != WP_UNDEFINED and
             (stop_id == WP_UNDEFINED or traffic_light_id < stop_id)):
             stop_id = traffic_light_id
-        if stop_id == WP_UNDEFINED:
-            return
-        
-        # Reset all waypoints after stopping point
-        for i in range (stop_id, len(waypoints)):
-            self.set_waypoint_velocity(waypoints[i], 0.0)
-
-        # Continuously decrease velocity until stopping point
-        # (adapted from waypoint_loader.py)
-        for i in range(stop_id):
-            dist = self.distance_path(waypoints, i, stop_id)
-            v_decel = math.sqrt(self.decel_max / 2 * dist)
-            if v_decel < 1.0:
-                v_decel = 0.0
-            v_wp = self.get_waypoint_velocity(waypoints[i])
-            self.set_waypoint_velocity(waypoints[i], min(v_wp, v_decel))
+        return stop_id
 
     def waypoint_in_range(self, waypoints, wp_id, first_id):
         """ Check if a given waypoint (defined through its absolute ID) is in 
