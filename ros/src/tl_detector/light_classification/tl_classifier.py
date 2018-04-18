@@ -10,10 +10,10 @@ from PIL import Image
 class TLClassifier(object):
     def __init__(self):
         # Store the path
-        model_path = rospkg.RosPack().get_path('light_classification')
+        model_path = rospkg.RosPack().get_path('tl_detector')
 
         # Use already trained model on COCO image set
-        model_path += '/models/frozen_pursuit_model.pb'
+        model_path += '/light_classification/models/frozen_pursuit_model.pb'
 
         # Load the graph model
         self.graph = self.load_graph(model_path)
