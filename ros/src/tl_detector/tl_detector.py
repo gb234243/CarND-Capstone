@@ -145,13 +145,11 @@ class TLDetector(object):
         """
         return self.waypoint_tree.query([x, y], 1)[1]
 
-    def get_light_state(self, light):
+    def get_light_state(self):
         """Determines the current color of the traffic light
 
            (adapted from Udacity SDC-ND Programming a Real Self-Driving Car 
             Project Walkthrough (Term 3))
-        Args:
-            light (TrafficLight): light to classify
 
         Returns:
             int: ID of traffic light color 
@@ -161,11 +159,10 @@ class TLDetector(object):
 
         # Check for valid image. If not present return RED as the state
         if(not self.has_image):
-            self.prev_light_loc = None
             return TrafficLight.RED
 
         # Convert the ROS image to CV2 for the classifer.
-        img_cv = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+        img_cv = self.bridge.imgmsg_to_cv2(self.camera_image, "rgb8")
 
         # Get the classifer
         return self.light_classifier.get_classification(img_cv)
@@ -207,7 +204,7 @@ class TLDetector(object):
                     line_wp_idx = temp_wp_idx
 
         if closest_light:
-            state = self.get_light_state(closest_light)
+            state = self.get_light_state()
             return line_wp_idx, state
         return -1, TrafficLight.UNKNOWN
 
