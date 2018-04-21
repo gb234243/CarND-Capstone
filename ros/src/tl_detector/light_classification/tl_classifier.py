@@ -21,7 +21,7 @@ class TLClassifier(object):
         # Create TF sessions
         self.sess = tf.Session(graph=self.graph)
 
-        # Definite input and output Tensors for graph
+        # Define input and output Tensors for graph
         self.image_tensor = self.graph.get_tensor_by_name('input_images:0')
         self.output = self.graph.get_tensor_by_name('output:0')
 
@@ -32,21 +32,25 @@ class TLClassifier(object):
         Returns:
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
         """
-        image_np = np.expand_dims(np.asarray(image, dtype=np.uint8), 0)
-        (output) = self.sess.run([self.output], feed_dict={self.image_tensor: image_np})
-        tl_color = np.squeeze(output)
+        #resize the image
+        img = cv2.resize(image, (300, 300))
+        idx = self.sess.run(tf.argmax(self.output, 1), feed_dict={self.image_tensor: [img]})[0]
+
+        #image_np = np.expand_dims(np.asarray(image, dtype=np.uint8), 0)
+        #(output) = self.sess.run([self.output], feed_dict={self.image_tensor: image_np})
+        #tl_color = np.squeeze(output)
 
         #['NoLight', 'Red', 'Yellow', 'Green']
-        if tl_color[1] == 1.:
+        if idx == 1:
             print("RED")
             return TrafficLight.RED
-        elif tl_color[0] == 1.:
+        elif idx == 0:
             print("Unknown")
             return TrafficLight.UNKNOWN
-        elif tl_color[2] == 1.:
+        elif idx == 2:
             print("Yellow")
             return TrafficLight.YELLOW
-        elif tl_color[3] == 1.:
+        elif idx == 3:
             print("GREEN")
             return TrafficLight.GREEN
         else:
@@ -68,7 +72,7 @@ if __name__ == '__main__':
     tl_cls = TLClassifier()
 
     # Load a sample image.
-    image = Image.open('./green.jpg')
+    image = Image.open('./Images/simulator/final/0045.jpg')
     tl_cls.get_classification(image)
 
     
