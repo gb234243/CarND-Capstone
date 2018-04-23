@@ -24,25 +24,26 @@ class TLClassifier(object):
         # Define input and output Tensors for graph
         self.image_tensor = self.graph.get_tensor_by_name('input_images:0')
         self.output = self.graph.get_tensor_by_name('output:0')
+        #for p in self.graph.get_operations():
+        #    print(p.name)
 
     def get_classification(self, image):
         """Determines the color of the traffic light in the image
         Args:
             image (cv::Mat): image containing the traffic light
         Returns:
-            int: ID of traffic light color (specified in styx_msgs/TrafficLight)
+            int: ID of traffic light color 
+                 (specified in styx_msgs/TrafficLight)
         """
-        #resize the image
-        img = cv2.resize(image, (300, 300))
-        idx = self.sess.run(tf.argmax(self.output, 1), feed_dict={self.image_tensor: [img]})[0]
-
-        #image_np = np.expand_dims(np.asarray(image, dtype=np.uint8), 0)
-        #(output) = self.sess.run([self.output], feed_dict={self.image_tensor: image_np})
-        #tl_color = np.squeeze(output)
+        # Resize and normalize the image
+        image = np.array(cv2.resize(image, (300, 300)))
+        image = image / 128 - 1.0
+        idx = self.sess.run(tf.argmax(self.output, 1), 
+                            feed_dict={self.image_tensor: [image]})[0]
 
         #['NoLight', 'Red', 'Yellow', 'Green']
         if idx == 1:
-            print("RED")
+            print("Red")
             return TrafficLight.RED
         elif idx == 0:
             print("Unknown")
