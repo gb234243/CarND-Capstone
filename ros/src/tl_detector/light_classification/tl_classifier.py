@@ -13,7 +13,7 @@ class TLClassifier(object):
         model_path = rospkg.RosPack().get_path('tl_detector')
 
         # Use already trained model on COCO image set
-        model_path += '/light_classification/models/frozen_pursuit_model.pb'
+        model_path += '/light_classification/model/tl-classifier-frozen-opt.pb'
 
         # Load the graph model
         self.graph = self.load_graph(model_path)
@@ -36,8 +36,9 @@ class TLClassifier(object):
                  (specified in styx_msgs/TrafficLight)
         """
         # Resize and normalize the image
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image = np.array(cv2.resize(image, (300, 300)))
-        image = image / 128 - 1.0
+        image = image / 128.0 - 1.0
         idx = self.sess.run(tf.argmax(self.output, 1), 
                             feed_dict={self.image_tensor: [image]})[0]
 
@@ -52,7 +53,7 @@ class TLClassifier(object):
             print("Yellow")
             return TrafficLight.YELLOW
         elif idx == 3:
-            print("GREEN")
+            print("Green")
             return TrafficLight.GREEN
         else:
             print("Unknown")
