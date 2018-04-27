@@ -11,9 +11,7 @@ class TLClassifier(object):
     def __init__(self):
         # Store the path
         model_path = rospkg.RosPack().get_path('tl_detector')
-
-        # Use already trained model on COCO image set
-        model_path += '/light_classification/model/tl-classifier-frozen-opt.pb'
+        model_path += '/light_classification/model/tl-classifier-frozen.pb'
 
         # Load the graph model
         self.graph = self.load_graph(model_path)
@@ -73,8 +71,3 @@ class TLClassifier(object):
 if __name__ == '__main__':
     tl_cls = TLClassifier()
 
-    # Load a sample image.
-    image = Image.open('./Images/simulator/final/0045.jpg')
-    tl_cls.get_classification(image)
-
-    
