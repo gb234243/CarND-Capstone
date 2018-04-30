@@ -25,9 +25,6 @@ class TLDetector(object):
         self.camera_image = None
         self.lights = []
 
-        sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
-        sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
-
         '''
         /vehicle/traffic_lights provides you with the location of the traffic 
         light in 3D map space and helps you acquire an accurate ground truth 
@@ -55,6 +52,9 @@ class TLDetector(object):
         self.last_wp = -1
         self.state_count = 0
         self.is_init = False
+
+        sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
+        sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # Adapted from Udacity SDC-ND Programming a Real Self-Driving Car 
         # Project Walkthrough (Term 3)
