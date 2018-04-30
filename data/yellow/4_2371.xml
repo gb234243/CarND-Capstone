@@ -1,0 +1,26 @@
+<annotation verified="yes">
+	<folder>yellow</folder>
+	<filename>4_2371.png</filename>
+	<path>/home/william/Downloads/simulator_steps/final/yellow/4_2371.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>800</width>
+		<height>600</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>Yellow</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>18</xmin>
+			<ymin>409</ymin>
+			<xmax>52</xmax>
+			<ymax>480</ymax>
+		</bndbox>
+	</object>
+</annotation>

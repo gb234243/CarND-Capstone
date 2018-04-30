@@ -1,0 +1,26 @@
+<annotation>
+	<folder>red</folder>
+	<filename>3_565.png</filename>
+	<path>C:\Data\sim_2\sim_2\final\red\3_565.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>800</width>
+		<height>600</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>Red</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>739</xmin>
+			<ymin>499</ymin>
+			<xmax>758</xmax>
+			<ymax>544</ymax>
+		</bndbox>
+	</object>
+</annotation>

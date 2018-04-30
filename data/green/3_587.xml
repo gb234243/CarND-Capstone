@@ -1,0 +1,26 @@
+<annotation>
+	<folder>green</folder>
+	<filename>3_587.png</filename>
+	<path>C:\Data\sim_2\sim_2\final\green\3_587.png</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>800</width>
+		<height>600</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>Green</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>709</xmin>
+			<ymin>476</ymin>
+			<xmax>730</xmax>
+			<ymax>529</ymax>
+		</bndbox>
+	</object>
+</annotation>
