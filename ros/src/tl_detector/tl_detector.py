@@ -21,11 +21,9 @@ class TLDetector(object):
 
         self.pose = None
         self.waypoints = None
+        self.has_image = False
         self.camera_image = None
         self.lights = []
-
-        sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
-        sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         '''
         /vehicle/traffic_lights provides you with the location of the traffic 
@@ -54,6 +52,9 @@ class TLDetector(object):
         self.last_wp = -1
         self.state_count = 0
         self.is_init = False
+
+        sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb)
+        sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
 
         # Adapted from Udacity SDC-ND Programming a Real Self-Driving Car 
         # Project Walkthrough (Term 3)
@@ -144,30 +145,28 @@ class TLDetector(object):
         """
         return self.waypoint_tree.query([x, y], 1)[1]
 
-    def get_light_state(self, light):
+    def get_light_state(self):
         """Determines the current color of the traffic light
 
            (adapted from Udacity SDC-ND Programming a Real Self-Driving Car 
             Project Walkthrough (Term 3))
-        Args:
-            light (TrafficLight): light to classify
 
         Returns:
             int: ID of traffic light color 
                  (specified in styx_msgs/TrafficLight)
 
         """
-        # TODO: Replace with call to classifier
-        return light.state
-        #if(not self.has_image):
-        #    self.prev_light_loc = None
-        #    return False
 
-        #cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
+        # Check for valid image. If not present return RED as the state
+        if(not self.has_image):
+            return TrafficLight.RED
 
-        #Get classification
-        #return self.light_classifier.get_classification(cv_image)
+        # Convert the ROS image to CV2 for the classifer.
+        img_cv = self.bridge.imgmsg_to_cv2(self.camera_image, "rgb8")
 
+        # Get the classifer
+        return self.light_classifier.get_classification(img_cv)
+        
     def process_traffic_lights(self):
         """Finds closest visible traffic light, if one exists, and determines 
            its location and color
@@ -205,7 +204,7 @@ class TLDetector(object):
                     line_wp_idx = temp_wp_idx
 
         if closest_light:
-            state = self.get_light_state(closest_light)
+            state = self.get_light_state()
             return line_wp_idx, state
         return -1, TrafficLight.UNKNOWN
 
