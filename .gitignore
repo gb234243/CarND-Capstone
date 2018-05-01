@@ -5,6 +5,4 @@ devel
 profile.tmp
 
 ###
-/tl-training
 .DS_STORE
-ros/src/tl_detector/light_classification/out.jpg
