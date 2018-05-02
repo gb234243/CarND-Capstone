@@ -1,9 +1,14 @@
-import os, io, hashlib, logging
+import os, io, hashlib, logging, sys
 
 import tensorflow as tf
 import PIL.Image
 import yaml
 import matplotlib.pyplot as plt
+import inspect
+
+# Add parent directory in order to get utilities from object_detection directory
+parentdir = os.path.dirname(os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe()))))
+sys.path.insert(0,parentdir)
 
 from object_detection.utils import dataset_util, label_map_util
 

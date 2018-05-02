@@ -1,3 +1,9 @@
+# Make folders if necessary
+mkdir models_frozen
+mkdir models_frozen/faster_rcnn_sim
+mkdir models_frozen/ssd_inception_sim
+
+# Change parent working directory
 cd ..
 export PYTHONPATH=$PYTHONPATH:`pwd`:`pwd`/slim
 

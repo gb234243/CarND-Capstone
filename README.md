@@ -55,6 +55,7 @@ $ mkdir models/research/obj_detection_wkspace
 $ mkdir models/research/obj_detection_wkspace/configs
 $ cp * models/research/obj_detection_wkspace/
 $ cp -rf configs models/research/obj_detection_wkspace/
+$ mv -f data models/research/obj_detection_wkspace/
 $ 
 $ # Change working directory
 $ cd models/research/obj_detection_wkspace
@@ -112,9 +113,16 @@ item {
 ```
 
 ### Training a Model
-Now that everything is ready, it is time to train the model. `train_models.sh` is provided to train either a Faster RCNN or SSD model.
+Now that everything is ready, it is time to train the model. `train_models.sh` is provided to train either a Faster RCNN or SSD model. Comment out the lines as desired.
 
-If you wish to run the commands line-by-line yourself, run the following commands. Note that the `train.py` file expects the parent working directory to be the `models/research` directory.
+```bash
+$ cd ..
+$
+$ # Run training
+$ ./train_models.sh
+```
+
+However, if you wish to run the commands line-by-line yourself, run the following commands. Note that the `train.py` file expects the parent working directory to be the `models/research` directory.
 
 ```bash
 $ cd ..
@@ -129,7 +137,12 @@ On a machine with an Nvidia GTX 1080, training with the Faster RCNN configuratio
 Note that you can stop the training midway if necessary. Calling `train.py` with the defined parameters and train directory will cause the training to resume from its last saved checkpoint.
 
 ### Freezing a Model
-Once the model has been trained, it's time to freeze it.
+Once the model has been trained, it's time to freeze it. The provided `freeze_models.sh` will freeze either a Faster RCNN or SSD model. Comment out the lines as desired.
+
+```bash
+$ # Freeze models
+$ freeze_models.sh
+```
 
 If you wish to run the commands line-by-line yourself, run the following commands. Note that like `train.py`, the `export_inference_graph.py` file expects the parent working directory to be the `models/research` directory.
 

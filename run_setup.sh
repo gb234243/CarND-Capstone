@@ -36,6 +36,7 @@ mkdir models/research/obj_detection_wkspace
 mkdir models/research/obj_detection_wkspace/configs
 cp * models/research/obj_detection_wkspace/
 cp -rf configs models/research/obj_detection_wkspace/
+mv -f data models/research/obj_detection_wkspace/
 
 # Change working directory
 cd models/research/obj_detection_wkspace
@@ -57,4 +58,5 @@ tar -xvzf ssd_inception_v2_coco_2017_11_17.tar.gz
 ############################################
 ## CREATE TF RECORD
 ############################################
+cd ..
 python create_tfrecord_from_yaml.py
