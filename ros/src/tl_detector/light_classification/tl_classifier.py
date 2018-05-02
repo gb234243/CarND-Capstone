@@ -54,7 +54,7 @@ class TLClassifier(object):
                  (specified in styx_msgs/TrafficLight)
         """
         # Convert the Image's Color Space
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
         # Predict Traffic Lights inside the Image
         starttime = time.time()
