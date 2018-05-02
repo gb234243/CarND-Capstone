@@ -61,7 +61,7 @@ $ cd models/research/obj_detection_wkspace
 ```
 
 ### Create TF Record from Dataset
-The TF record can now be created from within the workspace. A notebook, `Create TF Record from YAML.ipynb`, has been provided to do that. Run it to completion to generate the `data.record` file. If you plan on using your own data, make sure to edit this notebook.
+The TF record can now be created from within the workspace. A notebook, `Create TF Record from YAML.ipynb`, with a corresponding python file, `create_tfrecord_from_yaml.py`, has been provided to do that. Run either to completion to generate the `data.record` file. If you plan on using your own data, make sure to edit this notebook.
 
 Note that data should be added in a random order into the TF record file. If the TF record data is not shuffled (i.e. classes are grouped such that only class_x appears at the end of the TF record), the final trained network may end up unlearning all other classes and focus on learning just the last class it sees.
 

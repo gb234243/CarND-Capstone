@@ -53,3 +53,8 @@ tar -xvzf faster_rcnn_resnet50_coco_2018_01_28.tar.gz
 # Download the SSD Inception v2 Pretrained Model
 wget http://download.tensorflow.org/models/object_detection/ssd_inception_v2_coco_2017_11_17.tar.gz
 tar -xvzf ssd_inception_v2_coco_2017_11_17.tar.gz
+
+############################################
+## CREATE TF RECORD
+############################################
+python create_tfrecord_from_yaml.py
