@@ -260,7 +260,7 @@ class WaypointUpdater(object):
         # (to prevent driving over the stop line (e.g. due to latency from the
         #  controllers, node update rates, etc.) at which point the traffic
         #  light will not be detected in front of the car anymore)
-        wp_id = (wp_id - 4) if wp_id > 3 else 0 
+        #wp_id = (wp_id - 4) if wp_id > 3 else 0 
 
         # Is the waypoint in range?
         if wp_id >= LOOKAHEAD_WPS:
